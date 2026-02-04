@@ -1,0 +1,62 @@
+{
+  "date_placed": "2026-02-03T18:59:00-06:00",
+  "settlement_date": "2026-02-04",
+  "initial_capital": 1000,
+  "trades": [
+    {
+      "ticker": "KXHIGHNY-26FEB04-T30",
+      "city": "New York",
+      "condition": "High temp <30°F",
+      "side": "YES",
+      "entry_price_cents": 6,
+      "model_prob": 0.87,
+      "edge": 0.81,
+      "forecast_temp": 29,
+      "status": "open"
+    },
+    {
+      "ticker": "KXHIGHPHIL-26FEB04-T28",
+      "city": "Philadelphia",
+      "condition": "High temp <28°F",
+      "side": "YES",
+      "entry_price_cents": 2,
+      "model_prob": 0.81,
+      "edge": 0.79,
+      "forecast_temp": 27,
+      "status": "open"
+    },
+    {
+      "ticker": "KXHIGHAUS-26FEB04-T64",
+      "city": "Austin",
+      "condition": "High temp <64°F",
+      "side": "YES",
+      "entry_price_cents": 16,
+      "model_prob": 0.87,
+      "edge": 0.71,
+      "forecast_temp": 62,
+      "status": "open"
+    },
+    {
+      "ticker": "KXHIGHDEN-26FEB04-T49",
+      "city": "Denver",
+      "condition": "High temp <49°F",
+      "side": "YES",
+      "entry_price_cents": 12,
+      "model_prob": 0.74,
+      "edge": 0.63,
+      "forecast_temp": 49,
+      "status": "open"
+    },
+    {
+      "ticker": "KXHIGHCHI-26FEB04-T25",
+      "city": "Chicago",
+      "condition": "High temp <25°F",
+      "side": "YES",
+      "entry_price_cents": 4,
+      "model_prob": 0.61,
+      "edge": 0.57,
+      "forecast_temp": 25,
+      "status": "open"
+    }
+  ]
+}
