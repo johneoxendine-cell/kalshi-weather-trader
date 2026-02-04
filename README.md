@@ -158,3 +158,44 @@ With proper sizing and discipline:
 ## Disclaimer
 
 Trading involves risk. Past performance doesn't guarantee future results. Weather models can be wrong. Use paper trading first.
+
+---
+
+## Quick Recovery Guide
+
+If context is lost, here's how to get back up to speed:
+
+### API Endpoint
+```
+https://api.elections.kalshi.com/trade-api/v2
+```
+(NOT api.kalshi.com - that's deprecated)
+
+### Run Scanner
+```bash
+cd ~/kalshi-weather-trader
+python3 scanner.py
+```
+
+### Check Trades
+```bash
+cat trades/2026-02-03.json
+```
+
+### Cron Jobs
+Scanner runs every 2 hours via OpenClaw cron. Check with:
+```
+/cron list
+```
+
+### Market URLs
+```
+https://kalshi.com/events/KXHIGHNY-26FEB04  # NYC Feb 4
+https://kalshi.com/events/KXHIGHCHI-26FEB04 # Chicago Feb 4
+```
+
+### Contract Math
+- Price in cents (6¢ = $0.06 per contract)
+- Each contract pays $1 if it wins
+- Risk = contracts × price
+- Profit if win = contracts × (1 - price)
