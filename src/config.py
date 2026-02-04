@@ -9,13 +9,13 @@ from typing import Optional
 
 @dataclass
 class Config:
-    # Kalshi API
-    kalshi_api_url: str = "https://api.kalshi.com/trade-api/v2"
-    kalshi_demo_url: str = "https://demo-api.kalshi.co/trade-api/v2"
+    # Kalshi API (updated Feb 2026 - migrated to elections subdomain)
+    kalshi_api_url: str = "https://api.elections.kalshi.com/trade-api/v2"
+    kalshi_demo_url: str = "https://demo-api.kalshi.co/trade-api/v2"  # Demo may be deprecated
     kalshi_email: Optional[str] = None
     kalshi_password: Optional[str] = None
     kalshi_api_key: Optional[str] = None
-    use_demo: bool = True  # Start with demo API
+    use_demo: bool = False  # Use production API (read-only works without auth)
     
     # Weather APIs (all free, no key needed)
     nws_api_url: str = "https://api.weather.gov"
@@ -66,7 +66,7 @@ class Config:
             kalshi_api_key=os.getenv("KALSHI_API_KEY"),
             telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
             telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID"),
-            use_demo=os.getenv("KALSHI_USE_DEMO", "true").lower() == "true",
+            use_demo=os.getenv("KALSHI_USE_DEMO", "false").lower() == "true",
         )
 
 
