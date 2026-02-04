@@ -21,10 +21,14 @@ def format_alert(signals: list[Signal]) -> str:
     
     for s in signals[:MAX_ALERTS]:
         emoji = "📈" if s.direction == "YES" else "📉"
+        price_cents = s.market_price * 100
+        payout = s.suggested_contracts * 1.0
+        profit = payout - s.suggested_risk
         lines.append(f"{emoji} **{s.city}** {s.target_date[-5:]}")
         lines.append(f"   `{s.ticker}`")
-        lines.append(f"   {s.direction} @ {s.market_price:.0%} → Model: {s.model_prob:.0%}")
-        lines.append(f"   **Edge: {s.edge*100:.1f}%** | Size: ${s.suggested_size:.0f}")
+        lines.append(f"   {s.direction} @ {price_cents:.0f}¢ → Model: {s.model_prob:.0%}")
+        lines.append(f"   **Edge: {s.edge*100:.1f}%** | {s.suggested_contracts} contracts")
+        lines.append(f"   Risk ${s.suggested_risk:.2f} → Win +${profit:.2f}")
         lines.append("")
     
     if len(signals) > MAX_ALERTS:

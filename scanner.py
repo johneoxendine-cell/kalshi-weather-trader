@@ -43,31 +43,37 @@ class Signal:
     title: str
     city: str
     target_date: str
-    market_price: float  # YES price as decimal
+    market_price: float  # YES price as decimal (0.06 = 6¢)
     model_prob: float    # Model probability as decimal
     edge: float          # Edge as decimal
     direction: str       # "YES" or "NO"
     forecast_temp: float
     threshold: float
     confidence: float
-    suggested_size: float
+    suggested_contracts: int
+    suggested_risk: float  # Dollars to risk
     
     def to_alert(self) -> str:
         emoji = "📈" if self.direction == "YES" else "📉"
+        price_cents = self.market_price * 100
+        payout_if_win = self.suggested_contracts * 1.0
+        profit_if_win = payout_if_win - self.suggested_risk
         return f"""🌡️ **WEATHER SIGNAL**
 
 **{self.title[:60]}**
 📍 {self.city} | 📅 {self.target_date}
 
-{emoji} **{self.direction}** @ {self.market_price:.0%}
+{emoji} **{self.direction}** @ {price_cents:.0f}¢
 
 **Edge: {self.edge*100:.1f}%**
 • Model says: {self.model_prob:.0%}
-• Market says: {self.market_price:.0%}
+• Market says: {price_cents:.0f}¢
 • Forecast: {self.forecast_temp:.0f}°F
 
-**Confidence:** {self.confidence:.0%}
-**Suggested size:** ${self.suggested_size:.0f}
+**Suggested trade:**
+• {self.suggested_contracts} contracts @ {price_cents:.0f}¢
+• Risk: ${self.suggested_risk:.2f}
+• If win: +${profit_if_win:.2f}
 
 Ticker: `{self.ticker}`"""
 
@@ -192,18 +198,45 @@ def parse_market_threshold(ticker: str, title: str) -> Optional[tuple]:
     return None
 
 
-def kelly_size(edge: float, win_prob: float, capital: float = INITIAL_CAPITAL) -> float:
-    """Calculate Kelly criterion position size."""
-    if edge <= 0 or win_prob <= 0 or win_prob >= 1:
-        return 0
+def kelly_size(edge: float, win_prob: float, price: float, capital: float = INITIAL_CAPITAL) -> dict:
+    """
+    Calculate Kelly criterion position size for Kalshi contracts.
     
-    # Simplified Kelly for binary markets
-    # f* = (p * b - q) / b where b = odds, p = win prob, q = 1-p
-    # For prediction markets: f* = 2p - 1 (when fair odds)
+    Kalshi contracts:
+    - Price is in decimal (0.06 = 6¢)
+    - Each contract costs `price` dollars
+    - Each contract pays $1 if it wins
+    - Profit per contract if win = $1 - price
+    - Loss per contract if lose = price
     
-    kelly = edge * KELLY_FRACTION
-    size = capital * kelly
-    return min(size, MAX_POSITION_SIZE)
+    Returns dict with dollars_to_risk and num_contracts.
+    """
+    if edge <= 0 or win_prob <= 0 or win_prob >= 1 or price <= 0 or price >= 1:
+        return {"dollars": 0, "contracts": 0}
+    
+    # Kelly formula for binary outcomes with asymmetric payoffs
+    # b = odds = (1 - price) / price (profit per dollar risked)
+    # f* = (p * b - q) / b = p - q/b = p - q * price / (1 - price)
+    b = (1 - price) / price
+    q = 1 - win_prob
+    kelly_fraction_full = win_prob - (q / b) if b > 0 else 0
+    
+    # Apply fractional Kelly
+    kelly_fraction = kelly_fraction_full * KELLY_FRACTION
+    
+    if kelly_fraction <= 0:
+        return {"dollars": 0, "contracts": 0}
+    
+    # Dollars to risk
+    dollars = min(capital * kelly_fraction, MAX_POSITION_SIZE)
+    
+    # Convert to contracts: dollars / price_per_contract
+    contracts = int(dollars / price)
+    
+    # Actual dollars risked
+    actual_dollars = contracts * price
+    
+    return {"dollars": actual_dollars, "contracts": contracts}
 
 
 def scan_city(city: dict) -> List[Signal]:
@@ -304,6 +337,7 @@ def scan_city(city: dict) -> List[Signal]:
                 edge_no = (1 - model_prob) - (1 - market_price)
                 
                 if edge_yes >= MIN_EDGE_PCT:
+                    sizing = kelly_size(edge_yes, model_prob, market_price)
                     signals.append(Signal(
                         ticker=ticker,
                         title=title,
@@ -316,9 +350,13 @@ def scan_city(city: dict) -> List[Signal]:
                         forecast_temp=mean_temp,
                         threshold=threshold,
                         confidence=min(0.95, 0.5 + abs(edge_yes)),
-                        suggested_size=kelly_size(edge_yes, model_prob)
+                        suggested_contracts=sizing["contracts"],
+                        suggested_risk=sizing["dollars"]
                     ))
                 elif edge_no >= MIN_EDGE_PCT:
+                    # For NO bets, price is (1 - market_price)
+                    no_price = 1 - market_price
+                    sizing = kelly_size(edge_no, 1 - model_prob, no_price)
                     signals.append(Signal(
                         ticker=ticker,
                         title=title,
@@ -331,7 +369,8 @@ def scan_city(city: dict) -> List[Signal]:
                         forecast_temp=mean_temp,
                         threshold=threshold,
                         confidence=min(0.95, 0.5 + abs(edge_no)),
-                        suggested_size=kelly_size(edge_no, 1 - model_prob)
+                        suggested_contracts=sizing["contracts"],
+                        suggested_risk=sizing["dollars"]
                     ))
     
     return signals
@@ -368,12 +407,15 @@ def main():
         print(f"(Minimum edge: {MIN_EDGE_PCT*100:.0f}%)")
     else:
         for i, s in enumerate(signals[:10], 1):
+            price_cents = s.market_price * 100
+            payout = s.suggested_contracts * 1.0
+            profit = payout - s.suggested_risk
             print(f"[{i}] {s.ticker}")
             print(f"    {s.title[:60]}")
             print(f"    📍 {s.city} | 📅 {s.target_date}")
-            print(f"    {'📈' if s.direction == 'YES' else '📉'} {s.direction} @ {s.market_price:.0%}")
+            print(f"    {'📈' if s.direction == 'YES' else '📉'} {s.direction} @ {price_cents:.0f}¢")
             print(f"    Edge: {s.edge*100:.1f}% | Model: {s.model_prob:.0%} | Forecast: {s.forecast_temp:.0f}°F")
-            print(f"    Size: ${s.suggested_size:.0f}")
+            print(f"    Trade: {s.suggested_contracts} contracts, risk ${s.suggested_risk:.2f}, win +${profit:.2f}")
             print()
     
     print(f"Total signals: {len(signals)}")
